@@ -31,7 +31,7 @@ planlanan özellikler ayrı belirtilmiştir.
 
 ## 3. Ekipçe Netleştirilecek Konular
 
-- İlk sürümdeki dosya yükleme türleri
+- Desteklenecek kaynak kod uzantıları ve çoklu dosya yükleme kapsamı
 - API istek ve yanıt biçimleri
 - Analiz sonucundaki risk puanı mantığı
 - Çoklu dil desteğinin kesin kapsamı

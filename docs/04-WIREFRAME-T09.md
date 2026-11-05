@@ -94,7 +94,7 @@ Nihai görsel tasarım ve uygulama sonraki geliştirme aşamalarında gerçekle�
 |                                              |
 |  +----------------------------------------+  |
 |  |                                        |  |
-|  |        ZIP DOSYASI SEÇ                |  |
+|  |        ZIP / KAYNAK DOSYASI SEÇ        |  |
 |  |                                        |  |
 |  +----------------------------------------+  |
 |                                              |
@@ -318,7 +318,7 @@ Giriş / Kayıt
 |---|---|
 | Giriş Yap | Giriş doğrulanır, başarılıysa Projeler açılır |
 | Yeni Proje | Yükleme ekranı açılır |
-| Dosya Seç | Bilgisayardan ZIP seçilir |
+| Dosya Seç | ZIP veya desteklenen kaynak kod dosyası seçilir |
 | Analizi Başlat | Geçerli dosya backend'e gönderilir (hedeflenen davranış) |
 | Raporu Gör | Tamamlanan analiz raporu açılır |
 | Metodu İncele | Seçilen metodun ayrıntısı gösterilir |
