@@ -40,6 +40,7 @@ function Dashboard({ go }: { go: (p: Page) => void }) {
     <div className="projects-grid">{projects.map(p => <article className="project-card" key={p.id}><div className="project-icon">{p.language.slice(0,2)}</div><div><h4>{p.name}</h4><p>{p.language} · {p.methods} metot</p><small>{p.lastAnalyzed}</small></div><div className="project-footer"><Badge score={p.score}/><button className="text-button" onClick={() => go('report')}>İncele →</button></div></article>)}</div>
   </>;
 }
+const uploadExtensions = ['.zip', '.py', '.java', '.cpp'];
 function Upload({ go }: { go: (p: Page) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState('');
@@ -47,12 +48,16 @@ function Upload({ go }: { go: (p: Page) => void }) {
     const picked = event.target.files?.[0] ?? null;
     setFile(null); setError('');
     if (!picked) return;
-    if (!picked.name.toLowerCase().endsWith('.zip')) return setError('Bu ilk ekran yalnızca .zip dosyası seçer.');
+    const fileName = picked.name.toLowerCase();
+if (!uploadExtensions.some(ext => fileName.endsWith(ext))) {
+  setError(`Lütfen ${uploadExtensions.join(', ')} uzantılarından birine sahip bir dosya seç.`);
+  return;
+}
     if (picked.size > 25 * 1024 * 1024) return setError('Demo için 25 MB üzerindeki dosyalar seçilemez. Kesin limit backend ile belirlenecek.');
     setFile(picked);
   }
-  return <div className="two-col"><section className="panel"><div className="panel-header"><h3>ZIP dosyası seç</h3><p>Java, Python, JavaScript, C# ve diğer destekli diller için arayüz taslağı.</p></div>
-    <label className="dropzone"><span className="upload-symbol">⇧</span><strong>Dosya seçmek için tıkla</strong><span>Yalnızca .zip · demo sınırı 25 MB</span><input aria-label="ZIP dosyası seç" type="file" accept=".zip,application/zip" onChange={select}/></label>
+  return <div className="two-col"><section className="panel"><div className="panel-header"><h3>	ZIP veya kaynak kod dosyası seç</h3><p>Bir ZIP arşivi veya tek bir Python, Java ya da C++ dosyası seçebilirsin.</p></div>
+    <label className="dropzone"><span className="upload-symbol">⇧</span><strong>Dosya seçmek için tıkla</strong><span>{uploadExtensions.join(', ')} · demo sınırı 25 MB</span><input aria-label="	ZIP veya kaynak kod dosyası seç" type="file" 	accept={[...uploadExtensions, 'application/zip'].join(',')} onChange={select}/></label>
     {file && <div className="file-selected"><strong>Seçilen dosya:</strong><span>{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</span></div>}
     {error && <p className="error" role="alert">{error}</p>}
     <div className="notice"><strong>Henüz gerçek yükleme yapılmıyor.</strong><p>Dosya yalnızca bu tarayıcı sekmesinde seçiliyor. Sunucuya gönderilmiyor; dosya içeriği okunmuyor. Gerçek API bağlantısını sonraki aşamada ekleyeceğiz.</p></div>
