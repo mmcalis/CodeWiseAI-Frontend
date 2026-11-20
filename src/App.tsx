@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Login from './Login';
 import type { ChangeEvent } from 'react';
 import type { Page, Language, MethodRisk } from './types';
 import { methods, projects, riskCounts } from './data/mock';
@@ -78,7 +79,29 @@ function Assistant() {
 function History() { return <section className="panel history-panel"><div className="empty-symbol">◷</div><h3>Analiz geçmişi</h3><p>Gerçek analiz geçmişini Zehra'nın .NET API'si PostgreSQL'den döndürecek. Bu ekranda henüz kayıt yok.</p><div className="notice slim"><strong>Gelecek sürüm:</strong> Analiz tarihi, proje sürümü, risk farkı ve iki sürümün karşılaştırılması.</div></section>; }
 export default function App() {
  const [page,setPage] = useState<Page>('dashboard');
- return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-icon">&lt;/&gt;</div><div><strong>CodeWise <em>AI</em></strong><span>Risk & Development Advisor</span></div></div><div className="sidebar-caption">ÇALIŞMA ALANI</div><nav aria-label="Ana menü">{nav.map(item=><button key={item.id} className={`nav-link ${item.id===page?'active':''}`} onClick={()=>setPage(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}</button>)}</nav><div className="sidebar-bottom"><span className="demo-dot"/> DEMO MODU <small>Mustafa · Frontend v0.1</small></div></aside>
+ const [demoLoggedIn, setDemoLoggedIn] = useState(false);
+
+ if (!demoLoggedIn) {
+   return <Login onDemoLogin={() => setDemoLoggedIn(true)} />;
+ }
+ return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-icon">&lt;/&gt;</div><div><strong>CodeWise <em>AI</em></strong><span>Risk & Development Advisor</span></div></div><div className="sidebar-caption">ÇALIŞMA ALANI</div><nav aria-label="Ana menü">{nav.map(item=><button key={item.id} className={`nav-link ${item.id===page?'active':''}`} onClick={()=>setPage(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}</button>)}</nav>
+<div className="sidebar-bottom">
+  <span className="demo-dot" /> DEMO MODU
+  <small>Mustafa · Frontend v0.1</small>
+
+  <button
+    type="button"
+    className="text-button"
+    style={{ marginTop: 16, color: '#ffffff' }}
+    onClick={() => {
+      setDemoLoggedIn(false);
+      setPage('dashboard');
+    }}
+  >
+    Çıkış Yap (Demo)
+  </button>
+</div>
+</aside>
  <main className="content"><header className="topbar"><div><span className="eyebrow">CODEWISE AI / PLATFORM</span><h1>{pageNames[page]}</h1></div><div className="top-status"><span className="demo-dot"/> Örnek verilerle çalışıyor</div></header>
  <div className="page-body">{page==='dashboard'&&<Dashboard go={setPage}/>} {page==='upload'&&<Upload go={setPage}/>} {page==='report'&&<Report go={setPage}/>} {page==='assistant'&&<Assistant/>} {page==='history'&&<History/>}</div><footer>Bitirme Projesi · Modül C — Frontend prototipi · Veri kaynağı: mock</footer></main></div>;
 }
