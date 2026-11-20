@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Login from './Login';
 import type { ChangeEvent } from 'react';
 import type { Page, Language, MethodRisk } from './types';
@@ -44,22 +44,73 @@ const uploadExtensions = ['.zip', '.py', '.java', '.cpp'];
 function Upload({ go }: { go: (p: Page) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function clearSelection(message = '') {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    setFile(null);
+    setError(message);
+  }
+
   function select(event: ChangeEvent<HTMLInputElement>) {
-    const picked = event.target.files?.[0] ?? null;
-    setFile(null); setError('');
-    if (!picked) return;
-    const fileName = picked.name.toLowerCase();
-if (!uploadExtensions.some(ext => fileName.endsWith(ext))) {
-  setError(`Lütfen ${uploadExtensions.join(', ')} uzantılarından birine sahip bir dosya seç.`);
-  return;
-}
-    if (picked.size > 25 * 1024 * 1024) return setError('Demo için 25 MB üzerindeki dosyalar seçilemez. Kesin limit backend ile belirlenecek.');
+    const picked = event.currentTarget.files?.[0];
+
+    if (!picked) {
+      clearSelection();
+      return;
+    }
+
+    const name = picked.name.toLowerCase();
+
+    if (!uploadExtensions.some(ext => name.endsWith(ext))) {
+      clearSelection(`Bu dosya türü desteklenmiyor. ${uploadExtensions.join(', ')} uzantılı bir dosya seç.`);
+      return;
+    }
+
+    if (picked.size === 0) {
+      clearSelection('Dosya boş (0 bayt). İçeriği olan bir dosya seç.');
+      return;
+    }
+
+    if (picked.size > 25 * 1024 * 1024) {
+      clearSelection('Dosya 25 MB sınırını aşıyor. Daha küçük bir dosya seç.');
+      return;
+    }
+
+    setError('');
     setFile(picked);
   }
   return <div className="two-col"><section className="panel"><div className="panel-header"><h3>	ZIP veya kaynak kod dosyası seç</h3><p>Bir ZIP arşivi veya tek bir Python, Java ya da C++ dosyası seçebilirsin.</p></div>
-    <label className="dropzone"><span className="upload-symbol">⇧</span><strong>Dosya seçmek için tıkla</strong><span>{uploadExtensions.join(', ')} · demo sınırı 25 MB</span><input aria-label="	ZIP veya kaynak kod dosyası seç" type="file" 	accept={[...uploadExtensions, 'application/zip'].join(',')} onChange={select}/></label>
-    {file && <div className="file-selected"><strong>Seçilen dosya:</strong><span>{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</span></div>}
-    {error && <p className="error" role="alert">{error}</p>}
+        <label className="dropzone">
+      <span className="upload-symbol">⇧</span>
+      <strong>Dosya seçmek için tıkla</strong>
+      <span>{uploadExtensions.join(', ')} · demo sınırı 25 MB</span>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        aria-label="ZIP veya kaynak kod dosyası seç"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'upload-error' : undefined}
+        accept={[...uploadExtensions, 'application/zip'].join(',')}
+        onChange={select}
+      />
+    </label>
+
+    {file && (
+      <div className="file-selected">
+        <strong>Seçilen dosya</strong>
+        <span>{file.name} · {file.size.toLocaleString('tr-TR')} bayt</span>
+        <button type="button" className="text-button" onClick={() => clearSelection()}>
+          Seçimi kaldır
+        </button>
+      </div>
+    )}
+
+    {error && <p id="upload-error" className="error" role="alert">{error}</p>}
     <div className="notice"><strong>Henüz gerçek yükleme yapılmıyor.</strong><p>Dosya yalnızca bu tarayıcı sekmesinde seçiliyor. Sunucuya gönderilmiyor; dosya içeriği okunmuyor. Gerçek API bağlantısını sonraki aşamada ekleyeceğiz.</p></div>
     <button className="primary" disabled={!file} onClick={() => go('report')}>Örnek raporu görüntüle →</button>
     <p className="fineprint">Bu düğme seçtiğin dosyayı analiz etmez; sadece demo raporu açar.</p>
