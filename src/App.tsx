@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import Login from './Login';
+import UploadRequestDemo from './UploadRequestDemo';
 import type { ChangeEvent } from 'react';
 import type { Page, Language, MethodRisk } from './types';
 import { methods, projects, riskCounts } from './data/mock';
@@ -111,6 +112,7 @@ function Upload({ go }: { go: (p: Page) => void }) {
     )}
 
     {error && <p id="upload-error" className="error" role="alert">{error}</p>}
+        {file && <UploadRequestDemo file={file} />}
     <div className="notice"><strong>Henüz gerçek yükleme yapılmıyor.</strong><p>Dosya yalnızca bu tarayıcı sekmesinde seçiliyor. Sunucuya gönderilmiyor; dosya içeriği okunmuyor. Gerçek API bağlantısını sonraki aşamada ekleyeceğiz.</p></div>
     <button className="primary" disabled={!file} onClick={() => go('report')}>Örnek raporu görüntüle →</button>
     <p className="fineprint">Bu düğme seçtiğin dosyayı analiz etmez; sadece demo raporu açar.</p>
