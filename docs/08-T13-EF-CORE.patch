@@ -1,0 +1,838 @@
+CodeWise AI / F1 / T13 — Proje ve analiz EF Core migration
+Kaynak sürüm: https://github.com/zehra-demir34/Ai_Assistant/commit/b6f65a9bfe9d8edb78af318eededa22336c5bd2c
+Migration: 20261121142039_AddProjectsAndAnalyses
+Önceki migration: 20260918122215_AddDocumentEntity
+
+Ortak backend geliştirme dalında kullanım:
+1. Yamanın dosya yolunu kullanarak backend deposunun kökünde git apply --check çalıştırın.
+2. Uygun olduğunda aynı dosyayı git apply ile uygulayın ve projeyi derleyin.
+3. EF modelinin güncelliğini aşağıdaki komutla kontrol edin.
+   dotnet ef migrations has-pending-model-changes --project src/Infrastructure --startup-project src/web.api
+4. Geliştirme veritabanında migration geçmişini ve eski kullanıcı kayıtlarını doğrulayın.
+
+diff --git a/src/Application/Chat/IApplicationDbContext.cs b/src/Application/Chat/IApplicationDbContext.cs
+index a64fc25b0314fea552c9db0a4bd97b399c78ae16..f97cd7f7dae81d54faa0d3ea85fc382aa848fb54 100644
+--- a/src/Application/Chat/IApplicationDbContext.cs
++++ b/src/Application/Chat/IApplicationDbContext.cs
+@@ -13,6 +13,8 @@ namespace Application.Chat
+         DbSet<ChatSession> ChatSessions { get; }
+         DbSet<ChatMessage> ChatMessages { get; }
+         DbSet<Domain.Entities.Document> Documents { get; }
++        DbSet<Project> Projects { get; }
++        DbSet<ProjectAnalysis> Analyses { get; }
+         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+ 
+     }
+diff --git a/src/Domain/Entities/Project.cs b/src/Domain/Entities/Project.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..e437cbdd0afd47fb5cb0759364b7bdb36d4edd87
+--- /dev/null
++++ b/src/Domain/Entities/Project.cs
+@@ -0,0 +1,12 @@
++namespace Domain.Entities;
++
++public sealed class Project
++{
++    public Guid Id { get; set; }
++    public Guid OwnerId { get; set; }
++    public required string Name { get; set; }
++    public DateTime CreatedAt { get; set; }
++
++    public AppUser Owner { get; set; } = null!;
++    public ICollection<ProjectAnalysis> Analyses { get; } = new List<ProjectAnalysis>();
++}
+diff --git a/src/Domain/Entities/ProjectAnalysis.cs b/src/Domain/Entities/ProjectAnalysis.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..de9644ec52c60617b105de2ec01e40fdb474e8a3
+--- /dev/null
++++ b/src/Domain/Entities/ProjectAnalysis.cs
+@@ -0,0 +1,14 @@
++namespace Domain.Entities;
++
++public sealed class ProjectAnalysis
++{
++    public Guid Id { get; set; }
++    public Guid ProjectId { get; set; }
++    public string? VersionTag { get; set; }
++    public string Status { get; set; } = "queued";
++    public string? ModelVersion { get; set; }
++    public string? SummaryJson { get; set; }
++    public DateTime CreatedAt { get; set; }
++
++    public Project Project { get; set; } = null!;
++}
+diff --git a/src/Infrastructure/ApplicationDbContext.cs b/src/Infrastructure/ApplicationDbContext.cs
+index 5d76f2be0b16cb45194c484ce970e07f708e4087..27e214c9156651eabbec79ab3aa1455cff943cea 100644
+--- a/src/Infrastructure/ApplicationDbContext.cs
++++ b/src/Infrastructure/ApplicationDbContext.cs
+@@ -21,6 +21,9 @@ namespace Infrastructure
+         public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+         public DbSet<Domain.Entities.Document> Documents => Set<Domain.Entities.Document>();
++        public DbSet<Project> Projects => Set<Project>();
++        public DbSet<ProjectAnalysis> Analyses => Set<ProjectAnalysis>();
++
+         protected override void OnModelCreating(ModelBuilder builder)
+         {
+             base.OnModelCreating(builder);
+@@ -36,6 +39,38 @@ namespace Infrastructure
+                 .WithMany(session=>session.Documents)
+                 .HasForeignKey(document=>document.SessionId)
+                 .OnDelete(DeleteBehavior.Cascade);
++
++            builder.Entity<Project>(project =>
++            {
++                project.ToTable("projects");
++                project.Property(p => p.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
++                project.Property(p => p.OwnerId).HasColumnName("owner_id");
++                project.Property(p => p.Name).HasColumnName("name").IsRequired();
++                project.Property(p => p.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
++
++                project.HasOne(p => p.Owner)
++                    .WithMany()
++                    .HasForeignKey(p => p.OwnerId)
++                    .OnDelete(DeleteBehavior.NoAction);
++            });
++
++            builder.Entity<ProjectAnalysis>(analysis =>
++            {
++                analysis.ToTable("analyses", table => table.HasCheckConstraint(
++                    "ck_analyses_status", "status IN ('queued', 'running', 'completed', 'failed')"));
++                analysis.Property(a => a.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
++                analysis.Property(a => a.ProjectId).HasColumnName("project_id");
++                analysis.Property(a => a.VersionTag).HasColumnName("version_tag");
++                analysis.Property(a => a.Status).HasColumnName("status").HasDefaultValue("queued");
++                analysis.Property(a => a.ModelVersion).HasColumnName("model_version");
++                analysis.Property(a => a.SummaryJson).HasColumnName("summary").HasColumnType("jsonb");
++                analysis.Property(a => a.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
++
++                analysis.HasOne(a => a.Project)
++                    .WithMany(p => p.Analyses)
++                    .HasForeignKey(a => a.ProjectId)
++                    .OnDelete(DeleteBehavior.NoAction);
++            });
+         }
+         
+     }
+diff --git a/src/Infrastructure/Migrations/20261121142039_AddProjectsAndAnalyses.Designer.cs b/src/Infrastructure/Migrations/20261121142039_AddProjectsAndAnalyses.Designer.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..a7363d117a02cc45fb523977d270657eb3b60dc6
+--- /dev/null
++++ b/src/Infrastructure/Migrations/20261121142039_AddProjectsAndAnalyses.Designer.cs
+@@ -0,0 +1,504 @@
++﻿// <auto-generated />
++using System;
++using Infrastructure;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Infrastructure;
++using Microsoft.EntityFrameworkCore.Migrations;
++using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
++using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
++
++#nullable disable
++
++namespace Infrastructure.Migrations
++{
++    [DbContext(typeof(ApplicationDbContext))]
++    [Migration("20261121142039_AddProjectsAndAnalyses")]
++    partial class AddProjectsAndAnalyses
++    {
++        /// <inheritdoc />
++        protected override void BuildTargetModel(ModelBuilder modelBuilder)
++        {
++#pragma warning disable 612, 618
++            modelBuilder
++                .HasAnnotation("ProductVersion", "8.0.29")
++                .HasAnnotation("Relational:MaxIdentifierLength", 63);
++
++            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
++
++            modelBuilder.Entity("Domain.Entities.AppUser", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid");
++
++                    b.Property<int>("AccessFailedCount")
++                        .HasColumnType("integer");
++
++                    b.Property<string>("ConcurrencyStamp")
++                        .IsConcurrencyToken()
++                        .HasColumnType("text");
++
++                    b.Property<string>("Email")
++                        .HasMaxLength(256)
++                        .HasColumnType("character varying(256)");
++
++                    b.Property<bool>("EmailConfirmed")
++                        .HasColumnType("boolean");
++
++                    b.Property<bool>("LockoutEnabled")
++                        .HasColumnType("boolean");
++
++                    b.Property<DateTimeOffset?>("LockoutEnd")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<string>("NormalizedEmail")
++                        .HasMaxLength(256)
++                        .HasColumnType("character varying(256)");
++
++                    b.Property<string>("NormalizedUserName")
++                        .HasMaxLength(256)
++                        .HasColumnType("character varying(256)");
++
++                    b.Property<string>("PasswordHash")
++                        .HasColumnType("text");
++
++                    b.Property<string>("PhoneNumber")
++                        .HasColumnType("text");
++
++                    b.Property<bool>("PhoneNumberConfirmed")
++                        .HasColumnType("boolean");
++
++                    b.Property<string>("SecurityStamp")
++                        .HasColumnType("text");
++
++                    b.Property<bool>("TwoFactorEnabled")
++                        .HasColumnType("boolean");
++
++                    b.Property<string>("UserName")
++                        .HasMaxLength(256)
++                        .HasColumnType("character varying(256)");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("NormalizedEmail")
++                        .HasDatabaseName("EmailIndex");
++
++                    b.HasIndex("NormalizedUserName")
++                        .IsUnique()
++                        .HasDatabaseName("UserNameIndex");
++
++                    b.ToTable("AspNetUsers", (string)null);
++                });
++
++            modelBuilder.Entity("Domain.Entities.ChatMessage", b =>
++                {
++                    b.Property<Guid>("MessageId")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid");
++
++                    b.Property<string>("Content")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<int>("Role")
++                        .HasColumnType("integer");
++
++                    b.Property<Guid>("SessionId")
++                        .HasColumnType("uuid");
++
++                    b.HasKey("MessageId");
++
++                    b.HasIndex("SessionId");
++
++                    b.ToTable("ChatMessages");
++                });
++
++            modelBuilder.Entity("Domain.Entities.ChatSession", b =>
++                {
++                    b.Property<Guid>("SessionId")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<Guid>("UserId")
++                        .HasColumnType("uuid");
++
++                    b.HasKey("SessionId");
++
++                    b.HasIndex("UserId");
++
++                    b.ToTable("ChatSessions");
++                });
++
++            modelBuilder.Entity("Domain.Entities.Document", b =>
++                {
++                    b.Property<Guid>("DocumentId")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid");
++
++                    b.Property<string>("Content")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.Property<string>("FileName")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.Property<string>("FileType")
++                        .IsRequired()
++                        .HasColumnType("text");
++
++                    b.Property<Guid>("SessionId")
++                        .HasColumnType("uuid");
++
++                    b.Property<DateTime>("UploadedAt")
++                        .HasColumnType("timestamp with time zone");
++
++                    b.Property<Guid>("UserId")
++                        .HasColumnType("uuid");
++
++                    b.HasKey("DocumentId");
++
++                    b.HasIndex("SessionId");
++
++                    b.ToTable("Documents");
++                });
++
++            modelBuilder.Entity("Domain.Entities.Project", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid")
++                        .HasColumnName("id")
++                        .HasDefaultValueSql("gen_random_uuid()");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("timestamp with time zone")
++                        .HasColumnName("created_at")
++                        .HasDefaultValueSql("now()");
++
++                    b.Property<string>("Name")
++                        .IsRequired()
++                        .HasColumnType("text")
++                        .HasColumnName("name");
++
++                    b.Property<Guid>("OwnerId")
++                        .HasColumnType("uuid")
++                        .HasColumnName("owner_id");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("OwnerId");
++
++                    b.ToTable("projects", (string)null);
++                });
++
++            modelBuilder.Entity("Domain.Entities.ProjectAnalysis", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid")
++                        .HasColumnName("id")
++                        .HasDefaultValueSql("gen_random_uuid()");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("timestamp with time zone")
++                        .HasColumnName("created_at")
++                        .HasDefaultValueSql("now()");
++
++                    b.Property<string>("ModelVersion")
++                        .HasColumnType("text")
++                        .HasColumnName("model_version");
++
++                    b.Property<Guid>("ProjectId")
++                        .HasColumnType("uuid")
++                        .HasColumnName("project_id");
++
++                    b.Property<string>("Status")
++                        .IsRequired()
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("text")
++                        .HasDefaultValue("queued")
++                        .HasColumnName("status");
++
++                    b.Property<string>("SummaryJson")
++                        .HasColumnType("jsonb")
++                        .HasColumnName("summary");
++
++                    b.Property<string>("VersionTag")
++                        .HasColumnType("text")
++                        .HasColumnName("version_tag");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("ProjectId");
++
++                    b.ToTable("analyses", null, t =>
++                        {
++                            t.HasCheckConstraint("ck_analyses_status", "status IN ('queued', 'running', 'completed', 'failed')");
++                        });
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid");
++
++                    b.Property<string>("ConcurrencyStamp")
++                        .IsConcurrencyToken()
++                        .HasColumnType("text");
++
++                    b.Property<string>("Name")
++                        .HasMaxLength(256)
++                        .HasColumnType("character varying(256)");
++
++                    b.Property<string>("NormalizedName")
++                        .HasMaxLength(256)
++                        .HasColumnType("character varying(256)");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("NormalizedName")
++                        .IsUnique()
++                        .HasDatabaseName("RoleNameIndex");
++
++                    b.ToTable("AspNetRoles", (string)null);
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
++                {
++                    b.Property<int>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("integer");
++
++                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
++
++                    b.Property<string>("ClaimType")
++                        .HasColumnType("text");
++
++                    b.Property<string>("ClaimValue")
++                        .HasColumnType("text");
++
++                    b.Property<Guid>("RoleId")
++                        .HasColumnType("uuid");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("RoleId");
++
++                    b.ToTable("AspNetRoleClaims", (string)null);
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
++                {
++                    b.Property<int>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("integer");
++
++                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
++
++                    b.Property<string>("ClaimType")
++                        .HasColumnType("text");
++
++                    b.Property<string>("ClaimValue")
++                        .HasColumnType("text");
++
++                    b.Property<Guid>("UserId")
++                        .HasColumnType("uuid");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("UserId");
++
++                    b.ToTable("AspNetUserClaims", (string)null);
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
++                {
++                    b.Property<string>("LoginProvider")
++                        .HasColumnType("text");
++
++                    b.Property<string>("ProviderKey")
++                        .HasColumnType("text");
++
++                    b.Property<string>("ProviderDisplayName")
++                        .HasColumnType("text");
++
++                    b.Property<Guid>("UserId")
++                        .HasColumnType("uuid");
++
++                    b.HasKey("LoginProvider", "ProviderKey");
++
++                    b.HasIndex("UserId");
++
++                    b.ToTable("AspNetUserLogins", (string)null);
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
++                {
++                    b.Property<Guid>("UserId")
++                        .HasColumnType("uuid");
++
++                    b.Property<Guid>("RoleId")
++                        .HasColumnType("uuid");
++
++                    b.HasKey("UserId", "RoleId");
++
++                    b.HasIndex("RoleId");
++
++                    b.ToTable("AspNetUserRoles", (string)null);
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
++                {
++                    b.Property<Guid>("UserId")
++                        .HasColumnType("uuid");
++
++                    b.Property<string>("LoginProvider")
++                        .HasColumnType("text");
++
++                    b.Property<string>("Name")
++                        .HasColumnType("text");
++
++                    b.Property<string>("Value")
++                        .HasColumnType("text");
++
++                    b.HasKey("UserId", "LoginProvider", "Name");
++
++                    b.ToTable("AspNetUserTokens", (string)null);
++                });
++
++            modelBuilder.Entity("Domain.Entities.ChatMessage", b =>
++                {
++                    b.HasOne("Domain.Entities.ChatSession", "Session")
++                        .WithMany("Messages")
++                        .HasForeignKey("SessionId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Session");
++                });
++
++            modelBuilder.Entity("Domain.Entities.ChatSession", b =>
++                {
++                    b.HasOne("Domain.Entities.AppUser", "User")
++                        .WithMany("Sessions")
++                        .HasForeignKey("UserId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("User");
++                });
++
++            modelBuilder.Entity("Domain.Entities.Document", b =>
++                {
++                    b.HasOne("Domain.Entities.ChatSession", "Session")
++                        .WithMany("Documents")
++                        .HasForeignKey("SessionId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Session");
++                });
++
++            modelBuilder.Entity("Domain.Entities.Project", b =>
++                {
++                    b.HasOne("Domain.Entities.AppUser", "Owner")
++                        .WithMany()
++                        .HasForeignKey("OwnerId")
++                        .OnDelete(DeleteBehavior.NoAction)
++                        .IsRequired();
++
++                    b.Navigation("Owner");
++                });
++
++            modelBuilder.Entity("Domain.Entities.ProjectAnalysis", b =>
++                {
++                    b.HasOne("Domain.Entities.Project", "Project")
++                        .WithMany("Analyses")
++                        .HasForeignKey("ProjectId")
++                        .OnDelete(DeleteBehavior.NoAction)
++                        .IsRequired();
++
++                    b.Navigation("Project");
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
++                {
++                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
++                        .WithMany()
++                        .HasForeignKey("RoleId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
++                {
++                    b.HasOne("Domain.Entities.AppUser", null)
++                        .WithMany()
++                        .HasForeignKey("UserId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
++                {
++                    b.HasOne("Domain.Entities.AppUser", null)
++                        .WithMany()
++                        .HasForeignKey("UserId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
++                {
++                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
++                        .WithMany()
++                        .HasForeignKey("RoleId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.HasOne("Domain.Entities.AppUser", null)
++                        .WithMany()
++                        .HasForeignKey("UserId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++                });
++
++            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
++                {
++                    b.HasOne("Domain.Entities.AppUser", null)
++                        .WithMany()
++                        .HasForeignKey("UserId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++                });
++
++            modelBuilder.Entity("Domain.Entities.AppUser", b =>
++                {
++                    b.Navigation("Sessions");
++                });
++
++            modelBuilder.Entity("Domain.Entities.ChatSession", b =>
++                {
++                    b.Navigation("Documents");
++
++                    b.Navigation("Messages");
++                });
++
++            modelBuilder.Entity("Domain.Entities.Project", b =>
++                {
++                    b.Navigation("Analyses");
++                });
++#pragma warning restore 612, 618
++        }
++    }
++}
+diff --git a/src/Infrastructure/Migrations/20261121142039_AddProjectsAndAnalyses.cs b/src/Infrastructure/Migrations/20261121142039_AddProjectsAndAnalyses.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..1faa89dca50e20c9252cc4fea577c86fc67d2d22
+--- /dev/null
++++ b/src/Infrastructure/Migrations/20261121142039_AddProjectsAndAnalyses.cs
+@@ -0,0 +1,77 @@
++﻿using System;
++using Microsoft.EntityFrameworkCore.Migrations;
++
++#nullable disable
++
++namespace Infrastructure.Migrations
++{
++    /// <inheritdoc />
++    public partial class AddProjectsAndAnalyses : Migration
++    {
++        /// <inheritdoc />
++        protected override void Up(MigrationBuilder migrationBuilder)
++        {
++            migrationBuilder.CreateTable(
++                name: "projects",
++                columns: table => new
++                {
++                    id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
++                    owner_id = table.Column<Guid>(type: "uuid", nullable: false),
++                    name = table.Column<string>(type: "text", nullable: false),
++                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()")
++                },
++                constraints: table =>
++                {
++                    table.PrimaryKey("PK_projects", x => x.id);
++                    table.ForeignKey(
++                        name: "FK_projects_AspNetUsers_owner_id",
++                        column: x => x.owner_id,
++                        principalTable: "AspNetUsers",
++                        principalColumn: "Id");
++                });
++
++            migrationBuilder.CreateTable(
++                name: "analyses",
++                columns: table => new
++                {
++                    id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
++                    project_id = table.Column<Guid>(type: "uuid", nullable: false),
++                    version_tag = table.Column<string>(type: "text", nullable: true),
++                    status = table.Column<string>(type: "text", nullable: false, defaultValue: "queued"),
++                    model_version = table.Column<string>(type: "text", nullable: true),
++                    summary = table.Column<string>(type: "jsonb", nullable: true),
++                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()")
++                },
++                constraints: table =>
++                {
++                    table.PrimaryKey("PK_analyses", x => x.id);
++                    table.CheckConstraint("ck_analyses_status", "status IN ('queued', 'running', 'completed', 'failed')");
++                    table.ForeignKey(
++                        name: "FK_analyses_projects_project_id",
++                        column: x => x.project_id,
++                        principalTable: "projects",
++                        principalColumn: "id");
++                });
++
++            migrationBuilder.CreateIndex(
++                name: "IX_analyses_project_id",
++                table: "analyses",
++                column: "project_id");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_projects_owner_id",
++                table: "projects",
++                column: "owner_id");
++        }
++
++        /// <inheritdoc />
++        protected override void Down(MigrationBuilder migrationBuilder)
++        {
++            migrationBuilder.DropTable(
++                name: "analyses");
++
++            migrationBuilder.DropTable(
++                name: "projects");
++        }
++    }
++}
+diff --git a/src/Infrastructure/Migrations/ApplicationDbContextModelSnapshot.cs b/src/Infrastructure/Migrations/ApplicationDbContextModelSnapshot.cs
+index c6331ae0ce1c6165cf3cf78f5531b3033d303409..18a5e9a69e9704b25caddf0e542dbb2e531f3779 100644
+--- a/src/Infrastructure/Migrations/ApplicationDbContextModelSnapshot.cs
++++ b/src/Infrastructure/Migrations/ApplicationDbContextModelSnapshot.cs
+@@ -166,6 +166,83 @@ namespace Infrastructure.Migrations
+                     b.ToTable("Documents");
+                 });
+ 
++            modelBuilder.Entity("Domain.Entities.Project", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid")
++                        .HasColumnName("id")
++                        .HasDefaultValueSql("gen_random_uuid()");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("timestamp with time zone")
++                        .HasColumnName("created_at")
++                        .HasDefaultValueSql("now()");
++
++                    b.Property<string>("Name")
++                        .IsRequired()
++                        .HasColumnType("text")
++                        .HasColumnName("name");
++
++                    b.Property<Guid>("OwnerId")
++                        .HasColumnType("uuid")
++                        .HasColumnName("owner_id");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("OwnerId");
++
++                    b.ToTable("projects", (string)null);
++                });
++
++            modelBuilder.Entity("Domain.Entities.ProjectAnalysis", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("uuid")
++                        .HasColumnName("id")
++                        .HasDefaultValueSql("gen_random_uuid()");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("timestamp with time zone")
++                        .HasColumnName("created_at")
++                        .HasDefaultValueSql("now()");
++
++                    b.Property<string>("ModelVersion")
++                        .HasColumnType("text")
++                        .HasColumnName("model_version");
++
++                    b.Property<Guid>("ProjectId")
++                        .HasColumnType("uuid")
++                        .HasColumnName("project_id");
++
++                    b.Property<string>("Status")
++                        .IsRequired()
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("text")
++                        .HasDefaultValue("queued")
++                        .HasColumnName("status");
++
++                    b.Property<string>("SummaryJson")
++                        .HasColumnType("jsonb")
++                        .HasColumnName("summary");
++
++                    b.Property<string>("VersionTag")
++                        .HasColumnType("text")
++                        .HasColumnName("version_tag");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("ProjectId");
++
++                    b.ToTable("analyses", null, t =>
++                        {
++                            t.HasCheckConstraint("ck_analyses_status", "status IN ('queued', 'running', 'completed', 'failed')");
++                        });
++                });
++
+             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
+                 {
+                     b.Property<Guid>("Id")
+@@ -329,6 +406,28 @@ namespace Infrastructure.Migrations
+                     b.Navigation("Session");
+                 });
+ 
++            modelBuilder.Entity("Domain.Entities.Project", b =>
++                {
++                    b.HasOne("Domain.Entities.AppUser", "Owner")
++                        .WithMany()
++                        .HasForeignKey("OwnerId")
++                        .OnDelete(DeleteBehavior.NoAction)
++                        .IsRequired();
++
++                    b.Navigation("Owner");
++                });
++
++            modelBuilder.Entity("Domain.Entities.ProjectAnalysis", b =>
++                {
++                    b.HasOne("Domain.Entities.Project", "Project")
++                        .WithMany("Analyses")
++                        .HasForeignKey("ProjectId")
++                        .OnDelete(DeleteBehavior.NoAction)
++                        .IsRequired();
++
++                    b.Navigation("Project");
++                });
++
+             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
+                 {
+                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
+@@ -391,6 +490,11 @@ namespace Infrastructure.Migrations
+ 
+                     b.Navigation("Messages");
+                 });
++
++            modelBuilder.Entity("Domain.Entities.Project", b =>
++                {
++                    b.Navigation("Analyses");
++                });
+ #pragma warning restore 612, 618
+         }
+     }
