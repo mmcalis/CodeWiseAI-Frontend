@@ -1,0 +1,35 @@
+name: codewise-mustafa-f1
+
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8088:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: codewise
+      POSTGRES_DB: codewise
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "codewise", "-d", "codewise"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+secrets:
+  db_password:
+    file: ./.env.t17-db-password
+
+volumes:
+  pgdata:
