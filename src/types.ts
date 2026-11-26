@@ -1,6 +1,6 @@
 export type Language = 'Python' | 'Java' | 'JavaScript' | 'C#';
 export type RiskLevel = 'Düşük' | 'Orta' | 'Yüksek';
-export type Page = 'dashboard' | 'upload' | 'report' | 'assistant' | 'history';
+export type Page = 'dashboard' | 'upload' | 'status' | 'report' | 'assistant' | 'history';
 export interface MethodRisk {
   id: string;
   file: string;

@@ -1,0 +1,45 @@
+.analysis-preview {
+  max-width: 760px;
+}
+.analysis-preview h2 {
+  margin-top: 0;
+}
+.analysis-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0;
+}
+.analysis-choices [aria-pressed="true"] {
+  color: #fff;
+  background: #193852;
+  border-color: #193852;
+}
+.analysis-state {
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border-inline-start: 4px solid #63768a;
+  border-radius: 4px;
+  background: #f1f5f8;
+}
+.analysis-state[data-state="running"] {
+  border-color: #2a61a0;
+  background: #eef5fc;
+}
+.analysis-state[data-state="completed"] {
+  border-color: #18705d;
+  background: #edf6f2;
+}
+.analysis-state[data-state="failed"] {
+  border-color: #a64635;
+  background: #fcf0ed;
+}
+.analysis-state h3 {
+  margin: 0 0 6px;
+}
+.analysis-state p {
+  margin: 0;
+}
+.analysis-filename {
+  overflow-wrap: anywhere;
+}

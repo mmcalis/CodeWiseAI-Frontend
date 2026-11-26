@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import Login from './Login';
+import AnalysisStatus from './AnalysisStatus';
 import UploadRequestDemo from './UploadRequestDemo';
 import type { ChangeEvent } from 'react';
 import type { Page, Language, MethodRisk } from './types';
@@ -7,11 +8,12 @@ import { methods, projects, riskCounts } from './data/mock';
 
 const pageNames: Record<Page, string> = {
   dashboard: 'Projeler', upload: 'Proje Yükle', report: 'Risk Raporu',
-  assistant: 'AI Asistan', history: 'Analiz Geçmişi',
+  status: 'Analiz Durumu', assistant: 'AI Asistan', history: 'Analiz Geçmişi',
 };
 const nav: { id: Page; icon: string; label: string }[] = [
   { id: 'dashboard', icon: '▦', label: 'Projeler' },
   { id: 'upload', icon: '⇧', label: 'Proje yükle' },
+  { id: 'status', icon: '◴', label: 'Analiz durumu' },
   { id: 'report', icon: '▥', label: 'Risk raporu' },
   { id: 'assistant', icon: '✳', label: 'AI asistan' },
   { id: 'history', icon: '◷', label: 'Analiz geçmişi' },
@@ -42,7 +44,10 @@ function Dashboard({ go }: { go: (p: Page) => void }) {
   </>;
 }
 const uploadExtensions = ['.zip', '.py', '.java', '.cpp'];
-function Upload({ go }: { go: (p: Page) => void }) {
+function Upload({ go, onPreviewStatus }: {
+  go: (page: Page) => void;
+  onPreviewStatus: (fileName: string) => void;
+}) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,7 +117,7 @@ function Upload({ go }: { go: (p: Page) => void }) {
     )}
 
     {error && <p id="upload-error" className="error" role="alert">{error}</p>}
-        {file && <UploadRequestDemo file={file} />}
+    {file && <UploadRequestDemo file={file} onPreviewStatus={() => onPreviewStatus(file.name)} />}
     <div className="notice"><strong>Henüz gerçek yükleme yapılmıyor.</strong><p>Dosya yalnızca bu tarayıcı sekmesinde seçiliyor. Sunucuya gönderilmiyor; dosya içeriği okunmuyor. Gerçek API bağlantısını sonraki aşamada ekleyeceğiz.</p></div>
     <button className="primary" disabled={!file} onClick={() => go('report')}>Örnek raporu görüntüle →</button>
     <p className="fineprint">Bu düğme seçtiğin dosyayı analiz etmez; sadece demo raporu açar.</p>
@@ -138,11 +143,20 @@ function History() { return <section className="panel history-panel"><div classN
 export default function App() {
  const [page,setPage] = useState<Page>('dashboard');
  const [demoLoggedIn, setDemoLoggedIn] = useState(false);
+ const [previewFile, setPreviewFile] = useState<string | null>(null);
+
+ function previewAnalysis(fileName: string) {
+   setPreviewFile(fileName);
+   setPage('status');
+ }
 
  if (!demoLoggedIn) {
    return <Login onDemoLogin={() => setDemoLoggedIn(true)} />;
  }
- return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-icon">&lt;/&gt;</div><div><strong>CodeWise <em>AI</em></strong><span>Risk & Development Advisor</span></div></div><div className="sidebar-caption">ÇALIŞMA ALANI</div><nav aria-label="Ana menü">{nav.map(item=><button key={item.id} className={`nav-link ${item.id===page?'active':''}`} onClick={()=>setPage(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}</button>)}</nav>
+ return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-icon">&lt;/&gt;</div><div><strong>CodeWise <em>AI</em></strong><span>Risk & Development Advisor</span></div></div><div className="sidebar-caption">ÇALIŞMA ALANI</div><nav aria-label="Ana menü">{nav.map(item=><button key={item.id} className={`nav-link ${item.id===page?'active':''}`} onClick={() => {
+   setPreviewFile(null);
+   setPage(item.id);
+ }}><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>
 <div className="sidebar-bottom">
   <span className="demo-dot" /> DEMO MODU
   <small>Mustafa · Frontend v0.1</small>
@@ -153,6 +167,7 @@ export default function App() {
     style={{ marginTop: 16, color: '#ffffff' }}
     onClick={() => {
       setDemoLoggedIn(false);
+      setPreviewFile(null);
       setPage('dashboard');
     }}
   >
@@ -161,5 +176,14 @@ export default function App() {
 </div>
 </aside>
  <main className="content"><header className="topbar"><div><span className="eyebrow">CODEWISE AI / PLATFORM</span><h1>{pageNames[page]}</h1></div><div className="top-status"><span className="demo-dot"/> Örnek verilerle çalışıyor</div></header>
- <div className="page-body">{page==='dashboard'&&<Dashboard go={setPage}/>} {page==='upload'&&<Upload go={setPage}/>} {page==='report'&&<Report go={setPage}/>} {page==='assistant'&&<Assistant/>} {page==='history'&&<History/>}</div><footer>Bitirme Projesi · Modül C — Frontend prototipi · Veri kaynağı: mock</footer></main></div>;
+ <div className="page-body">
+   {page === 'dashboard' && <Dashboard go={setPage} />}
+   {page === 'upload' && <Upload go={setPage} onPreviewStatus={previewAnalysis} />}
+   {page === 'status' && (
+     <AnalysisStatus fileName={previewFile} onReport={() => setPage('report')} onUpload={() => setPage('upload')} />
+   )}
+   {page === 'report' && <Report go={setPage} />}
+   {page === 'assistant' && <Assistant />}
+   {page === 'history' && <History />}
+ </div><footer>Bitirme Projesi · Modül C — Frontend prototipi · Veri kaynağı: mock</footer></main></div>;
 }

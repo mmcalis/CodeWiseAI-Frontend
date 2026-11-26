@@ -8,7 +8,12 @@ type Trial = {
   reply: ReturnType<typeof receiveDemoUpload>;
 };
 
-export default function UploadRequestDemo({ file }: { file: File }) {
+type Props = {
+  file: File;
+  onPreviewStatus: () => void;
+};
+
+export default function UploadRequestDemo({ file, onPreviewStatus }: Props) {
   const [trial, setTrial] = useState<Trial | null>(null);
   const reply = trial?.file === file ? trial.reply : null;
 
@@ -48,6 +53,11 @@ export default function UploadRequestDemo({ file }: { file: File }) {
           <p>Dosya: {reply.fileName} · {reply.bytes.toLocaleString('tr-TR')} bayt</p>
           <p>Sürüm: {reply.versionTag || 'Belirtilmedi'}</p>
         </div>
+      )}
+      {reply?.ok && (
+        <button type="button" className="ghost" onClick={onPreviewStatus}>
+          Analiz durumunu önizle
+        </button>
       )}
       {reply?.ok === false && <p className="error" role="alert">{reply.message}</p>}
     </form>
