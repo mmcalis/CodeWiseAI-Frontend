@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import Login from './Login';
 import AnalysisStatus from './AnalysisStatus';
+import AnalizOlcumTablosu from './AnalizOlcumTablosu';
+// CodeRiskAI 689f601 · backend/analyzer.py · Lizard 1.17.10
+import analizOrnegi from './data/analiz-ornegi.json';
 import UploadRequestDemo from './UploadRequestDemo';
 import type { ChangeEvent } from 'react';
 import type { Page, Language, MethodRisk } from './types';
@@ -23,25 +26,52 @@ function Badge({ score }: { score: number }) {
   const level = riskLevel(score);
   return <span className={`risk-badge ${level === 'Yüksek' ? 'red' : level === 'Orta' ? 'orange' : 'green'}`}>{level} risk</span>;
 }
-function Stat({ value, label, hint }: { value: string; label: string; hint: string }) {
-  return <article className="stat"><p className="stat-label">{label}</p><strong>{value}</strong><span>{hint}</span></article>;
+function Stat({ value, label, hint }: { value: string; label: string; hint?: string }) {
+  return <article className="stat"><p className="stat-label">{label}</p><strong>{value}</strong>{hint && <span>{hint}</span>}</article>;
 }
 function RiskTable({ rows }: { rows: MethodRisk[] }) {
   return <div className="table-scroll"><table><thead><tr><th>Dosya ve metot</th><th>Dil</th><th>Karmaşıklık</th><th>Risk puanı</th><th>Durum</th></tr></thead>
     <tbody>{rows.map(m => <tr key={m.id}><td><strong>{m.method}</strong><small>{m.file}</small></td><td>{m.language}</td><td>{m.complexity}</td><td><strong>{m.score}/100</strong></td><td><Badge score={m.score} /></td></tr>)}</tbody>
   </table></div>;
 }
-function Dashboard({ go }: { go: (p: Page) => void }) {
-  return <>
-    <section className="hero"><div><span className="eyebrow">PROJE MERKEZİ</span><h2>Kodunu analiz et,<br/>risklerini keşfet.</h2><p>Farklı programlama dillerindeki projeleri tek bir merkezden izle. Bu sürümdeki tüm sonuçlar örnek veridir.</p><button className="primary" onClick={() => go('upload')}>+ Yeni proje yükle</button></div><div className="hero-graphic"><div className="orbit">&lt;/&gt;</div><span>Analyze · Explain · Improve</span></div></section>
-    <div className="stat-grid"><Stat
-  value={String(projects.length)}
-  label="Örnek proje"
-  hint="Demo proje listesi"
-/><Stat value="460" label="Örnek metot" hint="Temsili toplam" /><Stat value="2" label="Yüksek riskli örnek" hint="İncelenmesi önerilen" /></div>
-    <div className="section-title"><div><h3>Projelerin</h3><p>Örnek proje kartları · gerçek veritabanına bağlı değil</p></div><button className="ghost" onClick={() => go('report')}>Raporları gör →</button></div>
-    <div className="projects-grid">{projects.map(p => <article className="project-card" key={p.id}><div className="project-icon">{p.language.slice(0,2)}</div><div><h4>{p.name}</h4><p>{p.language} · {p.methods} metot</p><small>{p.lastAnalyzed}</small></div><div className="project-footer"><Badge score={p.score}/><button className="text-button" onClick={() => go('report')}>İncele →</button></div></article>)}</div>
-  </>;
+function Dashboard({ go }: { go: (page: Page) => void }) {
+  const toplamMetot = projects.reduce((total, project) => total + project.methods, 0);
+  const yuksekRiskli = projects.filter(project => riskLevel(project.score) === 'Yüksek').length;
+
+  return (
+    <>
+      <div className="stat-grid ozet-seridi">
+        <Stat value={String(projects.length)} label="Örnek proje" />
+        <Stat value={String(toplamMetot)} label="Toplam metot" />
+        <Stat value={String(yuksekRiskli)} label="Yüksek riskli proje" />
+      </div>
+      <section className="proje-bolumu" aria-labelledby="proje-listesi">
+        <h2 id="proje-listesi">Proje listesi</h2>
+        <div className="projects-grid">
+          {projects.map(project => (
+            <article className="project-card" key={project.id} aria-labelledby={`proje-${project.id}`}>
+              <div className="kart-basligi">
+                <h3 id={`proje-${project.id}`}>{project.name}</h3>
+                <span className="kart-dili">{project.language}</span>
+              </div>
+              <p>{project.methods} metot · {project.lastAnalyzed}</p>
+              <div className="kart-puani">
+                <label htmlFor={`puan-${project.id}`}>Örnek risk puanı</label>
+                <span aria-hidden="true">{project.score}/100</span>
+                <meter id={`puan-${project.id}`} min={0} max={100} value={project.score}>
+                  {project.score}/100
+                </meter>
+              </div>
+              <div className="project-footer">
+                <Badge score={project.score} />
+                <button type="button" className="text-button" onClick={() => go('report')}>Örnek raporu aç</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
+  );
 }
 const uploadExtensions = ['.zip', '.py', '.java', '.cpp'];
 function Upload({ go, onPreviewStatus }: {
@@ -123,7 +153,7 @@ function Upload({ go, onPreviewStatus }: {
     <p className="fineprint">Bu düğme seçtiğin dosyayı analiz etmez; sadece demo raporu açar.</p>
   </section><aside className="panel"><h3>Gerçek sürümün iş akışı</h3><ol className="steps"><li><strong>ZIP yükle</strong><span>.NET API dosyayı kabul eder, güvenliğini kontrol eder.</span></li><li><strong>Analizi başlat</strong><span>API, Alihan'ın FastAPI analiz servisini çağırır.</span></li><li><strong>Sonuçları göster</strong><span>Dosyalar ve metotlar risk skorlarıyla listelenir.</span></li><li><strong>Asistana sor</strong><span>Zehra'nın .NET asistanı gerçek analiz çıktısını kullanır.</span></li></ol></aside></div>;
 }
-function Report({ go }: { go: (p: Page) => void }) {
+function OrnekPuanRaporu({ go }: { go: (p: Page) => void }) {
   const [filter, setFilter] = useState<'Tümü' | Language>('Tümü');
   const rows = filter === 'Tümü' ? methods : methods.filter(m => m.language === filter);
   return <><div className="notice slim"><strong>DEMO RAPORU</strong> — Bu metrikler temsili veridir, gerçek kod analizi yapılmamıştır.</div>
@@ -132,6 +162,33 @@ function Report({ go }: { go: (p: Page) => void }) {
     <div className="section-title"><div><h3>Metot riskleri</h3><p>Dile göre filtrele ve örnek verileri incele.</p></div><label className="filter">Dil <select value={filter} onChange={e => setFilter(e.target.value as 'Tümü' | Language)}><option>Tümü</option><option>Python</option><option>Java</option><option>JavaScript</option><option>C#</option></select></label></div>
     <section className="panel no-padding"><RiskTable rows={rows}/></section>
   </>;
+}
+function Report({ go }: { go: (page: Page) => void }) {
+  const [gorunum, setGorunum] = useState('olcum');
+  const { file_count, method_count, complex_method_count } = analizOrnegi.summary;
+
+  return (
+    <>
+      <label className="filter rapor-secimi">
+        Rapor örneği
+        <select value={gorunum} onChange={event => setGorunum(event.target.value)}>
+          <option value="olcum">Örnek ZIP ölçümleri</option>
+          <option value="puan">Temsili risk puanları</option>
+        </select>
+      </label>
+      {gorunum === 'olcum' ? (
+        <>
+          <p className="notice slim">ornek-proje.zip için kaydedilen analiz çıktısı.</p>
+          <div className="stat-grid ozet-seridi">
+            <Stat value={String(file_count)} label="Ölçülen dosya" />
+            <Stat value={String(method_count)} label="Metot" />
+            <Stat value={String(complex_method_count)} label="Karmaşık metot" />
+          </div>
+          <AnalizOlcumTablosu data={analizOrnegi} />
+        </>
+      ) : <OrnekPuanRaporu go={go} />}
+    </>
+  );
 }
 function Assistant() {
   const [messages,setMessages] = useState<{ role:'assistant'|'user'; text:string }[]>([{role:'assistant',text:'Merhaba! Bu ekran bir sohbet taslağıdır. Gerçek yapay zekâya ve analiz sonuçlarına henüz bağlı değil.'}]);
@@ -175,7 +232,16 @@ export default function App() {
   </button>
 </div>
 </aside>
- <main className="content"><header className="topbar"><div><span className="eyebrow">CODEWISE AI / PLATFORM</span><h1>{pageNames[page]}</h1></div><div className="top-status"><span className="demo-dot"/> Örnek verilerle çalışıyor</div></header>
+ <main className="content">
+ <header className="topbar">
+   <h1>{pageNames[page]}</h1>
+   <div className="baslik-islemleri">
+     <div className="top-status"><span className="demo-dot" />Örnek veriler</div>
+     {page === 'dashboard' && (
+       <button className="primary" type="button" onClick={() => setPage('upload')}>+ Yeni proje yükle</button>
+     )}
+   </div>
+ </header>
  <div className="page-body">
    {page === 'dashboard' && <Dashboard go={setPage} />}
    {page === 'upload' && <Upload go={setPage} onPreviewStatus={previewAnalysis} />}

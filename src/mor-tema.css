@@ -1,0 +1,308 @@
+/* CodeWise AI · koyu lacivert ve mor tema */
+:root {
+  color-scheme: dark;
+  --sayfa-zemini: #121528;
+  --menu-zemini: #0d1021;
+  --panel-zemini: #1c223c;
+  --ikincil-zemin: #262d49;
+  --kenar: #39415e;
+  --metin: #f3f1ff;
+  --ikincil-metin: #b6bfd8;
+  --vurgu-rengi: #7450d5;
+  --baglanti: #cfbdff;
+  background: var(--sayfa-zemini);
+  color: var(--metin);
+}
+
+.sidebar {
+  background: var(--menu-zemini);
+  border-inline-end: 1px solid var(--kenar);
+  overflow-y: auto;
+}
+.brand-icon {
+  background: #261f48;
+  border: 1px solid #7861b4;
+  color: var(--baglanti);
+}
+.brand strong em,
+.steps li::marker,
+.empty-symbol {
+  color: var(--baglanti);
+}
+.brand span,
+.sidebar-caption,
+.sidebar-bottom,
+.sidebar-bottom small,
+.nav-link {
+  color: var(--ikincil-metin);
+}
+.sidebar-bottom,
+.app-shell .topbar,
+.project-footer {
+  border-color: var(--kenar);
+}
+.nav-link:hover {
+  background: var(--ikincil-zemin);
+  color: var(--metin);
+}
+.app-shell .nav-link.active {
+  background: #342859;
+  color: #f3edff;
+  box-shadow: inset 3px 0 #b494ff;
+}
+.app-shell .topbar {
+  background: var(--sayfa-zemini);
+}
+.app-shell .topbar h1 {
+  letter-spacing: -.04em;
+}
+.top-status {
+  background: #241e3c;
+  border-color: #574678;
+  color: var(--baglanti);
+}
+.demo-dot {
+  background: #b598ff;
+}
+.primary,
+.bubble.user {
+  background: var(--vurgu-rengi);
+  color: white;
+}
+.primary:hover:not(:disabled),
+.app-shell .primary:hover:not(:disabled) {
+  background: #8059dc;
+  filter: none;
+}
+.text-button,
+.proje-bolumu .text-button {
+  color: var(--baglanti);
+}
+.text-button:hover {
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}
+:focus-visible,
+.app-shell :focus-visible {
+  outline: 3px solid #e2c6ff;
+  outline-offset: 3px;
+}
+
+.stat,
+.panel,
+.project-card {
+  background: var(--panel-zemini);
+  border-color: var(--kenar);
+}
+.ozet-seridi {
+  gap: var(--kart-araligi);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+.ozet-seridi .stat,
+.ozet-seridi .stat + .stat {
+  border: 1px solid var(--kenar);
+  border-radius: 12px;
+}
+.ozet-seridi .stat strong {
+  color: var(--metin);
+}
+.proje-bolumu .project-card {
+  position: relative;
+}
+.proje-bolumu .project-card::before {
+  /* Sol üstteki köşeli ayraç, kartı kod bloğu gibi işaretler. */
+  content: "";
+  position: absolute;
+  inset: -1px auto auto -1px;
+  width: 22px;
+  height: 20px;
+  border: solid #a189ed;
+  border-width: 2px 0 0 2px;
+  border-radius: 13px 0 0 0;
+  pointer-events: none;
+}
+.proje-bolumu .project-card:focus-within {
+  border-color: #ab93ed;
+}
+.kart-dili {
+  padding: .2rem .5rem;
+  border-radius: 5px;
+  background: #302948;
+  color: var(--baglanti);
+  font-family: ui-monospace, Consolas, monospace;
+}
+.kart-puani {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 6px 12px;
+  font-size: .78rem;
+}
+.kart-puani label {
+  color: var(--ikincil-metin);
+}
+.kart-puani span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.kart-puani meter {
+  appearance: none;
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  background: var(--kenar);
+}
+.kart-puani meter::-webkit-meter-bar {
+  height: 100%;
+  background: var(--kenar);
+  border: 0;
+  border-radius: inherit;
+  box-shadow: none;
+}
+.kart-puani meter::-webkit-meter-optimum-value {
+  background: #ad92ff;
+}
+.kart-puani meter::-moz-meter-bar {
+  background: #ad92ff;
+}
+.risk-badge.red {
+  background: #4c283d;
+  color: #ffb3bf;
+}
+.risk-badge.orange {
+  background: #493822;
+  color: #ffd58c;
+}
+.risk-badge.green {
+  background: #193e3b;
+  color: #93e1bf;
+}
+
+.stat-label,
+.stat span,
+.proje-bolumu .project-card p,
+.panel-header p,
+.section-title p,
+.filter,
+.fineprint,
+.steps span,
+.method-label,
+.report-summary .panel > p:not(.method-label),
+.history-panel p,
+.olcum-ust p,
+td small,
+footer {
+  color: var(--ikincil-metin);
+}
+.panel input:not([type="file"]),
+.filter select,
+.chat-form input {
+  min-width: 0;
+  max-width: 100%;
+  padding: .55rem .7rem;
+  background: var(--menu-zemini);
+  color: var(--metin);
+  border: 1px solid #69728e;
+  border-radius: 7px;
+}
+.panel input::placeholder {
+  color: var(--ikincil-metin);
+}
+.ghost,
+.bubble,
+.notice {
+  background: var(--ikincil-zemin);
+  border-color: var(--kenar);
+  color: var(--metin);
+}
+.ghost {
+  color: var(--baglanti);
+}
+.ghost:hover,
+.analysis-choices [aria-pressed="true"] {
+  background: #42335e;
+  border-color: #ad92e1;
+  color: white;
+}
+.dropzone {
+  background: #221f37;
+  border-color: #8c73c4;
+  color: var(--metin);
+}
+.dropzone span {
+  color: var(--baglanti);
+}
+/* İlk stil dosyasında yükleme simgesinin rengi öncelikli tanımlanmış. */
+.dropzone .upload-symbol {
+  color: var(--baglanti) !important;
+}
+.dropzone:focus-within {
+  outline: 3px solid #e2c6ff;
+  outline-offset: 3px;
+}
+.file-selected,
+.bar-bg {
+  background: var(--ikincil-zemin);
+}
+.file-selected {
+  overflow-wrap: anywhere;
+}
+.error {
+  color: #ffafbd;
+}
+.analysis-state {
+  background: var(--ikincil-zemin);
+  border-color: #a9b2d1;
+}
+.analysis-state[data-state="running"] {
+  background: #292642;
+  border-color: #b192ff;
+}
+.analysis-state[data-state="completed"] {
+  background: #193a36;
+  border-color: #83d9ba;
+}
+.analysis-state[data-state="failed"] {
+  background: #432738;
+  border-color: #ffa4b2;
+}
+th,
+.olcum-paneli th {
+  background: var(--ikincil-zemin);
+  color: var(--ikincil-metin);
+}
+th,
+td {
+  border-color: var(--kenar);
+}
+td,
+td strong {
+  color: var(--metin);
+}
+tbody tr:hover {
+  background: #252b45;
+}
+
+@media (max-width: 650px) {
+  .sidebar {
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--kenar);
+  }
+  .sidebar nav {
+    padding: 4px;
+  }
+  .app-shell .nav-link.active {
+    box-shadow: inset 0 -2px #b494ff;
+  }
+}
+@media (forced-colors: active) {
+  .kart-puani meter {
+    appearance: auto;
+  }
+}

@@ -1,0 +1,150 @@
+/* Mustafa'nın Projeler ve Risk Raporu ekranları için seçebileceği değerler. */
+:root {
+  --vurgu-rengi: #145e65;
+  --baslik-boyutu: 32px;
+  --kart-araligi: 18px;
+  --sayfa-zemini: #f4f6f7;
+}
+
+.app-shell {
+  background: var(--sayfa-zemini);
+}
+
+.app-shell .topbar {
+  flex-wrap: wrap;
+  border-bottom-color: #d7dfe3;
+}
+.app-shell .topbar h1 {
+  margin: 0;
+  font-size: var(--baslik-boyutu);
+  line-height: 1.15;
+}
+.baslik-islemleri {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.app-shell .primary,
+.app-shell .nav-link.active {
+  background: var(--vurgu-rengi);
+  color: white;
+}
+.app-shell .primary:hover:not(:disabled) {
+  background: var(--vurgu-rengi);
+  filter: brightness(.9);
+}
+.app-shell :focus-visible {
+  outline: 3px solid #a15e0b;
+  outline-offset: 3px;
+}
+
+.ozet-seridi {
+  gap: 0;
+  margin: 0 0 28px;
+  background: white;
+  border: 1px solid #d7dfe3;
+  border-inline-start: 4px solid var(--vurgu-rengi);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ozet-seridi .stat {
+  gap: 6px;
+  border: 0;
+  border-radius: 0;
+}
+.ozet-seridi .stat + .stat {
+  border-inline-start: 1px solid #e0e5e8;
+}
+.ozet-seridi .stat strong {
+  color: var(--vurgu-rengi);
+  font-variant-numeric: tabular-nums;
+}
+.proje-bolumu h2,
+.olcum-ust h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+  letter-spacing: -.035em;
+}
+.proje-bolumu .projects-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--kart-araligi);
+}
+.proje-bolumu .project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  min-width: 0;
+}
+.kart-basligi {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kart-basligi h3 {
+  margin: 0;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.kart-dili {
+  color: #45566a;
+  font-size: 12px;
+}
+.proje-bolumu .project-card p {
+  margin: 0;
+  color: #485c6c;
+  line-height: 1.5;
+}
+.proje-bolumu .project-footer {
+  margin-top: auto;
+}
+.proje-bolumu .text-button {
+  color: var(--vurgu-rengi);
+}
+.rapor-secimi {
+  margin: 0 0 18px;
+}
+.olcum-paneli {
+  min-width: 0;
+}
+.olcum-ust {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.olcum-ust h2 {
+  margin-bottom: 4px;
+}
+.olcum-ust p {
+  margin: 0;
+  color: #536577;
+  font-size: 13px;
+}
+.olcum-paneli th {
+  color: #394e60;
+}
+.olcum-paneli td {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 650px) {
+  .proje-bolumu .projects-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ozet-seridi .stat + .stat {
+    border-inline-start: 0;
+    border-top: 1px solid #e0e5e8;
+  }
+  .app-shell .topbar h1 {
+    font-size: min(var(--baslik-boyutu), 28px);
+  }
+  .baslik-islemleri {
+    gap: 8px;
+  }
+}
