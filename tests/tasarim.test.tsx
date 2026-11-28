@@ -2,6 +2,8 @@
 import { afterEach, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import App from '../src/App';
+import AnalizOlcumTablosu from '../src/AnalizOlcumTablosu';
+import analizOrnegi from '../src/data/analiz-ornegi.json';
 import { projects as ornekProjeler } from '../src/data/mock';
 
 afterEach(cleanup);
@@ -66,4 +68,46 @@ it('temsili risk örneğine geçip dil filtresini kullanır ve ölçümlere dön
   expect(screen.getByRole('button', { name: /Asistana sor/ })).toBeTruthy();
   fireEvent.change(source, { target: { value: 'olcum' } });
   expect(screen.getByLabelText('Dosya filtresi')).toBeTruthy();
+});
+
+it('dosya ve uyarı filtrelerini birlikte uygular, temizleme düğmesi tüm satırları geri getirir', () => {
+  openReport();
+  const uyarilar = screen.getByRole('checkbox', { name: 'Yalnızca uyarılı metotlar' }) as HTMLInputElement;
+  const dosya = screen.getByLabelText('Dosya filtresi') as HTMLSelectElement;
+  fireEvent.click(uyarilar);
+  expect(screen.getByText('1 / 3 metot gösteriliyor.')).toBeTruthy();
+  expect(within(screen.getByRole('table')).getByText('puan_araligi')).toBeTruthy();
+
+  fireEvent.change(dosya, { target: { value: 'Sayac.java' } });
+  expect(screen.getByRole('status').textContent).toBe('Seçtiğin filtrelere uyan metot yok.');
+  expect(screen.queryByRole('table')).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Filtreleri temizle' }));
+  expect(uyarilar.checked).toBe(false);
+  expect(dosya.value).toBe('');
+  expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(4);
+  expect(screen.getByText('3 / 3 metot gösteriliyor.')).toBeTruthy();
+});
+
+it('yalnız uzunluk uyarısı olan metodu da filtrede gösterir', () => {
+  const uzunMetot = {
+    ...analizOrnegi.methods[0],
+    method: 'uzun_metot',
+    start_line: 1,
+    end_line: 150,
+    lines: 150,
+    complexity_warning: false,
+    long_method_warning: true,
+  };
+  render(<AnalizOlcumTablosu data={{ ...analizOrnegi, methods: [uzunMetot] }} />);
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Yalnızca uyarılı metotlar' }));
+  const tablo = within(screen.getByRole('table'));
+  expect(tablo.getByText('uzun_metot')).toBeTruthy();
+  expect(tablo.getByText('Uzun metot')).toBeTruthy();
+});
+
+it('hiç metot ölçülmeyen rapor için ayrı açıklama gösterir', () => {
+  render(<AnalizOlcumTablosu data={{ ...analizOrnegi, methods: [] }} />);
+  expect(screen.getByRole('status').textContent).toBe('Bu analizde metot kaydı yok.');
+  expect(screen.queryByRole('table')).toBeNull();
 });

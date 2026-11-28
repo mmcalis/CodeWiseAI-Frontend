@@ -110,6 +110,24 @@
 .olcum-paneli {
   min-width: 0;
 }
+.rapor-filtreleri {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  max-width: 100%;
+}
+.rapor-filtreleri .filter {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.rapor-filtreleri input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--vurgu-rengi);
+}
 .olcum-ust {
   display: flex;
   justify-content: space-between;
